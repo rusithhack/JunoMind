@@ -31,7 +31,15 @@ export interface Conversation {
 export class SupabaseUserService {
   private static currentUser: JunoUser | null = null
 
+  private static isSupabaseConfigured(): boolean {
+    return supabase !== null
+  }
+
   static async getCurrentUser(): Promise<JunoUser | null> {
+    if (!this.isSupabaseConfigured()) {
+      return null
+    }
+
     try {
       const {
         data: { user },
@@ -80,6 +88,10 @@ export class SupabaseUserService {
   }
 
   static async signUp(name: string, email: string, password: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isSupabaseConfigured()) {
+      return { success: false, error: "Database not configured. Please set up Supabase credentials." }
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -120,6 +132,10 @@ export class SupabaseUserService {
   }
 
   static async signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isSupabaseConfigured()) {
+      return { success: false, error: "Database not configured. Please set up Supabase credentials." }
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -144,6 +160,10 @@ export class SupabaseUserService {
   }
 
   static async signOut(): Promise<void> {
+    if (!this.isSupabaseConfigured()) {
+      return
+    }
+
     try {
       await supabase.auth.signOut()
       this.currentUser = null
@@ -154,6 +174,10 @@ export class SupabaseUserService {
   }
 
   static async updateUser(updates: Partial<JunoUser>): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return false
+    }
+
     try {
       const user = await this.getCurrentUser()
       if (!user) return false
@@ -186,6 +210,10 @@ export class SupabaseUserService {
 
   // Chat conversation methods
   static async saveConversation(messages: ChatMessage[], title?: string): Promise<string | null> {
+    if (!this.isSupabaseConfigured()) {
+      return null
+    }
+
     try {
       const user = await this.getCurrentUser()
       if (!user) return null
@@ -215,6 +243,10 @@ export class SupabaseUserService {
   }
 
   static async updateConversation(conversationId: string, messages: ChatMessage[]): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return false
+    }
+
     try {
       const { error } = await supabase
         .from("conversations")
@@ -237,6 +269,10 @@ export class SupabaseUserService {
   }
 
   static async getConversations(): Promise<Conversation[]> {
+    if (!this.isSupabaseConfigured()) {
+      return []
+    }
+
     try {
       const user = await this.getCurrentUser()
       if (!user) return []
@@ -267,6 +303,10 @@ export class SupabaseUserService {
   }
 
   static async deleteConversation(conversationId: string): Promise<boolean> {
+    if (!this.isSupabaseConfigured()) {
+      return false
+    }
+
     try {
       const { error } = await supabase.from("conversations").delete().eq("id", conversationId)
 
@@ -299,6 +339,10 @@ export class SupabaseUserService {
 
   // Initialize auth state listener
   static initializeAuthListener(): void {
+    if (!this.isSupabaseConfigured()) {
+      return
+    }
+
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         await this.getCurrentUser()
